@@ -1,3 +1,5 @@
+using Sparkle.CSharp.Logging;
+
 namespace Sparkle.CSharp.Rendering.Gifs;
 
 public static class GifManager {
@@ -15,6 +17,7 @@ public static class GifManager {
                 gif.Init();
             }
         }
+        
         HasInitialized = true;
     }
     
@@ -75,10 +78,21 @@ public static class GifManager {
         }
         
         if (HasInitialized) {
-            gif.Init();
+            if (!gif.HasInitialized) {
+                gif.Init();
+            }
         }
         
         Logger.Info($"Added Gif with texture ID [{gif.Texture.Id}] successfully.");
         Gifs.Add(gif);
+    }
+    
+    /// <summary>
+    /// Performs cleanup operations.
+    /// </summary>
+    public static void Destroy() {
+        foreach (Gif gif in Gifs.ToList()) {
+            gif.Dispose();
+        }
     }
 }

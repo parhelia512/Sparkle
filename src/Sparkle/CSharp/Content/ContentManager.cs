@@ -5,8 +5,10 @@ using Raylib_CSharp.Images;
 using Raylib_CSharp.Materials;
 using Raylib_CSharp.Shaders;
 using Raylib_CSharp.Textures;
+using Raylib_CSharp.Unsafe.Spans.Data;
 using Sparkle.CSharp.Content.Processors;
 using Sparkle.CSharp.Content.Types;
+using Sparkle.CSharp.Logging;
 using Sparkle.CSharp.Rendering.Gifs;
 
 namespace Sparkle.CSharp.Content;
@@ -26,11 +28,11 @@ public class ContentManager : Disposable {
         this.AddProcessors(typeof(Font), new FontProcessor());
         this.AddProcessors(typeof(Image), new ImageProcessor());
         this.AddProcessors(typeof(Texture2D), new TextureProcessor());
-        this.AddProcessors(typeof(Gif), new GifProcessor());
-        this.AddProcessors(typeof(ModelAnimation[]), new ModelAnimationProcessor());
-        this.AddProcessors(typeof(Material[]), new MaterialProcessor());
-        this.AddProcessors(typeof(Model), new ModelProcessor());
         this.AddProcessors(typeof(Shader), new ShaderProcessor());
+        this.AddProcessors(typeof(Gif), new GifProcessor());
+        this.AddProcessors(typeof(ReadOnlySpanData<ModelAnimation>), new ModelAnimationProcessor());
+        this.AddProcessors(typeof(ReadOnlySpanData<Material>), new MaterialProcessor());
+        this.AddProcessors(typeof(Model), new ModelProcessor());
         this.AddProcessors(typeof(Sound), new SoundProcessor());
         this.AddProcessors(typeof(Wave), new WaveProcessor());
         this.AddProcessors(typeof(Music), new MusicProcessor());
@@ -61,6 +63,25 @@ public class ContentManager : Disposable {
     }
     
     /// <summary>
+    /// Adds a item of unmanaged content to the content manager.
+    /// </summary>
+    /// <typeparam name="T">The type of content being added.</typeparam>
+    /// <param name="item">The item to be added.</param>
+    public void AddUnmanagedItem<T>(T item) {
+        if (this._processors.ContainsKey(typeof(T))) {
+            if (!this._content.Contains(item!)) {
+                this._content.Add(item!);
+            }
+            else {
+                Logger.Warn($"The item is already present in the Content for the specified type: {typeof(T)}!");
+            }
+        }
+        else {
+            Logger.Warn($"This item is of an unsupported type: {typeof(T)}!");
+        }
+    }
+    
+    /// <summary>
     /// Loads an item of type T from the specified directory using the provided content type.
     /// </summary>
     /// <typeparam name="T">The type of item to load.</typeparam>
@@ -68,16 +89,9 @@ public class ContentManager : Disposable {
     /// <returns>The loaded item of type T.</returns>
     public T Load<T>(IContentType<T> type) {
         IContentProcessor processor = this.TryGetProcessor(typeof(T));
-        
         T item = (T) processor.Load(type);
-
-        if (!this._content.Contains(item!)) {
-            this._content.Add(item!);
-        }
-        else {
-            Logger.Warn($"The item is already present in the Content for the specified type: {typeof(T)}!");
-        }
         
+        this._content.Add(item!);
         return item;
     }
     

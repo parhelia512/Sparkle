@@ -1,4 +1,5 @@
 using Sparkle.CSharp.Content;
+using Sparkle.CSharp.Logging;
 
 namespace Sparkle.CSharp.Registries;
 
@@ -35,6 +36,15 @@ public static class RegistryManager {
     internal static void Init() {
         foreach (Registry registry in RegisterTypes) {
             registry.Init();
+        }
+    }
+    
+    /// <summary>
+    /// Performs cleanup operations.
+    /// </summary>
+    public static void Destroy() {
+        foreach (Registry registry in RegisterTypes.ToList()) {
+            registry.Dispose();
         }
     }
 }

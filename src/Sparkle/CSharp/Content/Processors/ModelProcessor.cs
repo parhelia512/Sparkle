@@ -1,3 +1,4 @@
+using Raylib_CSharp;
 using Raylib_CSharp.Geometry;
 using Raylib_CSharp.Materials;
 using Sparkle.CSharp.Content.Types;
@@ -6,46 +7,39 @@ namespace Sparkle.CSharp.Content.Processors;
 
 public class ModelProcessor : IContentProcessor {
 
-    private Dictionary<Model, Material[]> _materials;
-
-    public ModelProcessor() {
-        this._materials = new Dictionary<Model, Material[]>();
-    }
-    
     public unsafe object Load<T>(IContentType<T> type) {
-        Model model = Model.Load(type.Path);
-
+        ModelContent contentType = (ModelContent) type;
+        Model model = Model.Load(contentType.Path);
+        
         for (int i = 0; i < model.MeshCount; i++) {
-            if (model.Meshes[i].Tangents == default) {
-                Mesh.GenTangents(ref model.Meshes[i]);
+            if (model.Meshes[i].TangentsPtr == default) {
+                model.Meshes[i].GenTangents();
             }
         }
 
-        ReadOnlySpan<Material> span = new ReadOnlySpan<Material>(model.MaterialsPtr, model.MaterialCount);
-        Material[] materials = span.ToArray();
-        this._materials.Add(model, materials);
+        foreach (Material material in model.Materials) {
+            if (material.Shader.Id != RlGl.GetShaderIdDefault()) {
+                if (material.Shader.IsReady()) {
+                    Game.Instance.Content.AddUnmanagedItem(material.Shader);
+                }
+            }
 
-        foreach (Material material in materials) {
-            //Material.Unload(material);
+            for (int i = 0; i < 12; i++) {
+                MaterialMap map = material.Maps[i];
+
+                if (map.Texture.Id != RlGl.GetTextureIdDefault()) {
+                    if (map.Texture.IsReady()) {
+                        Game.Instance.Content.AddUnmanagedItem(map.Texture);
+                    }
+                }
+            }
         }
         
+        contentType.Manipulator?.Build(ref model);
         return model;
     }
     
     public void Unload(object item) {
-        Model model = (Model) item;
-
-        if (!this._materials.TryGetValue(model, out Material[]? materials)) {
-            Logger.Warn($"Unable to locate materials for type: [{model}]!");
-        }
-        else {
-            foreach (Material material in materials) {
-                Material.Unload(material);
-            }
-            
-            model.MaterialCount = 0;
-        }
-
-        Model.Unload(model);
+        ((Model) item).Unload();
     }
 }

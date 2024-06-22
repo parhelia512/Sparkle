@@ -9,6 +9,7 @@ using Sparkle.CSharp.Content;
 using Sparkle.CSharp.Content.Types;
 using Sparkle.CSharp.Effects;
 using Sparkle.CSharp.GUI;
+using Sparkle.CSharp.Logging;
 using Sparkle.CSharp.Overlays;
 using Sparkle.CSharp.Registries;
 using Sparkle.CSharp.Registries.Types;
@@ -23,18 +24,17 @@ public class Game : Disposable {
     public static Game Instance { get; private set; }
     public static readonly Version Version = new Version(3, 1, 0);
     
-    private readonly double _fixedTimeStep;
-    private double _timer;
-    
     public readonly GameSettings Settings;
     public bool ShouldClose;
     
-    public NativeBindingContext BindingContext { get; private set; }
+    public NativeBindingsContext BindingContext { get; private set; }
     public ContentManager Content { get; private set; }
-    
     public Image Logo { get; private set; }
     
     public bool HasInitialized { get; private set; }
+    
+    private readonly double _fixedTimeStep;
+    private double _timer;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="Game"/>, setting the static Instance to this object, initializing game settings, and calculating the delay based on the FixedTimeStep.
@@ -56,16 +56,18 @@ public class Game : Disposable {
         }
 
         Logger.Info($"Hello World! Sparkle [{Version}] start...");
-        Logger.Info($"\tCPU: {SystemInfo.Cpu}");
-        Logger.Info($"\tMEMORY: {SystemInfo.MemorySize} GB");
-        Logger.Info($"\tTHREADS: {SystemInfo.Threads}");
-        Logger.Info($"\tOS: {SystemInfo.Os}");
-        Logger.Info($"\tAPI: {RlGl.GetVersion()}");
+        Logger.Info($"\t> CPU: {SystemInfo.Cpu}");
+        Logger.Info($"\t> MEMORY: {SystemInfo.MemorySize} GB");
+        Logger.Info($"\t> THREADS: {SystemInfo.Threads}");
+        Logger.Info($"\t> OS: {SystemInfo.Os}");
+        Logger.Info($"\t> Raylib-CSharp: {Raylib.Version}");
+        Logger.Info($"\t> Raylib: {Raylib.RlVersion}");
+        Logger.Info($"\t> API: {RlGl.GetVersion()}");
         
         Logger.Info("Initialize logger...");
         Logger.Init();
         
-        Time.SetTargetFps(this.Settings.TargetFps);
+        Time.SetTargetFPS(this.Settings.TargetFps);
 
         Logger.Info("Initialize content manager...");
         this.Content = new ContentManager();
@@ -80,12 +82,12 @@ public class Game : Disposable {
         this.Logo = this.Settings.IconPath == string.Empty ? this.Content.Load(new ImageContent("content/images/icon.png")) : this.Content.Load(new ImageContent(this.Settings.IconPath));
         Window.SetIcon(this.Logo);
         
-        Logger.Info("Initialize OpenTK binding..."); // TODO Remove it when Raylib-5.1 release 
-        this.BindingContext = new NativeBindingContext();
+        Logger.Info("Initialize OpenTK binding...");
+        this.BindingContext = new NativeBindingsContext();
         GLLoader.LoadBindings(this.BindingContext);
         
         this.OnRun();
-        
+
         Logger.Info("Load content...");
         this.Load();
         
@@ -105,7 +107,7 @@ public class Game : Disposable {
                 this.FixedUpdate();
                 this._timer -= this._fixedTimeStep;
             }
-            
+
             Graphics.BeginDrawing();
             Graphics.ClearBackground(Color.SkyBlue);
             this.Draw();
@@ -134,8 +136,8 @@ public class Game : Disposable {
     /// </summary>
     protected virtual void Init() {
         RegistryManager.Init();
-        GifManager.Init();
         EffectManager.Init();
+        GifManager.Init();
         SceneManager.Init();
         OverlayManager.Init();
     }
@@ -155,8 +157,8 @@ public class Game : Disposable {
     /// Called after the Update method on each tick to further update dynamic elements and game logic.
     /// </summary>
     protected virtual void AfterUpdate() {
-        GifManager.AfterUpdate();
         EffectManager.AfterUpdate();
+        GifManager.AfterUpdate();
         SceneManager.AfterUpdate();
         GuiManager.AfterUpdate();
         OverlayManager.AfterUpdate();
@@ -167,8 +169,8 @@ public class Game : Disposable {
     /// It is used for handling physics and other fixed-time operations.
     /// </summary>
     protected virtual void FixedUpdate() {
-        GifManager.FixedUpdate();
         EffectManager.FixedUpdate();
+        GifManager.FixedUpdate();
         SceneManager.FixedUpdate();
         GuiManager.FixedUpdate();
         OverlayManager.FixedUpdate();
@@ -178,8 +180,8 @@ public class Game : Disposable {
     /// Is called every tick, used for rendering stuff.
     /// </summary>
     protected virtual void Draw() {
-        GifManager.Draw();
         EffectManager.Draw();
+        GifManager.Draw();
         SceneManager.Draw();
         GuiManager.Draw();
         OverlayManager.Draw();
@@ -194,24 +196,12 @@ public class Game : Disposable {
 
     protected override void Dispose(bool disposing) {
         if (disposing) {
-            foreach (Registry registry in RegistryManager.RegisterTypes.ToList()) {
-                registry.Dispose();
-            }
-            
-            foreach (Overlay overlay in OverlayManager.Overlays.ToList()) {
-                overlay.Dispose();
-            }
-
-            foreach (Effect effect in EffectManager.Effects.ToList()) {
-                effect.Dispose();
-            }
-            
-            foreach (Gif gif in GifManager.Gifs.ToList()) {
-                gif.Dispose();
-            }
-            
-            GuiManager.ActiveGui?.Dispose();
-            SceneManager.ActiveScene?.Dispose();
+            RegistryManager.Destroy();
+            OverlayManager.Destroy();
+            EffectManager.Destroy();
+            GifManager.Destroy();
+            GuiManager.Destroy();
+            SceneManager.Destroy();
             this.Content.Dispose();
             this.BindingContext.Dispose();
             AudioDevice.Close();

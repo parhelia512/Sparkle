@@ -1,9 +1,9 @@
-using System.Drawing;
 using System.Numerics;
 using Raylib_CSharp;
-using Raylib_CSharp.Geometry;
+using Raylib_CSharp.Collision;
 using Raylib_CSharp.Rendering;
 using Raylib_CSharp.Textures;
+using Raylib_CSharp.Transformations;
 using Sparkle.CSharp.Entities;
 using Sparkle.CSharp.Scenes;
 using Color = Raylib_CSharp.Colors.Color;
@@ -16,7 +16,7 @@ public class Particle : Disposable {
 
     public Texture2D Texture;
     public Vector3 Position;
-
+    
     private float _lifeTime;
     private ParticleData _data;
 
@@ -54,7 +54,7 @@ public class Particle : Disposable {
         this._interpolationFactor = RayMath.Clamp(this._timer / this._lifeTime, 0.0F, 1.0F);
 
         if (this._timer >= this._lifeTime) {
-            SceneManager.ActiveScene?.RemoveParticle(this);
+            //SceneManager.ActiveScene?.RemoveParticle(this);
         }
 
         Vector3 velocity = RayMath.Vector3Lerp(this._data.StartVelocity, this._data.EndVelocity, this._interpolationFactor);
@@ -80,22 +80,26 @@ public class Particle : Disposable {
         if (cam == null) return;
         
         Vector2 size = RayMath.Vector2Lerp(this._data.StartSize, this._data.EndSize, this._interpolationFactor);
-        float rotation = RayMath.Lerp(this._data.StartRotation, this._data.EndRotation, this._interpolationFactor);
+        BoundingBox box = new BoundingBox(this.Position - new Vector3(size.X / 2, size.Y / 2, size.X / 2), this.Position + new Vector3(size.X / 2, size.Y / 2, size.X / 2));
         
-        Color color = new Color() {
-            R = (byte) RayMath.Lerp(this._data.StartColor.R, this._data.EndColor.R, this._interpolationFactor),
-            G = (byte) RayMath.Lerp(this._data.StartColor.G, this._data.EndColor.G, this._interpolationFactor),
-            B = (byte) RayMath.Lerp(this._data.StartColor.B, this._data.EndColor.B, this._interpolationFactor),
-            A = (byte) RayMath.Lerp(this._data.StartColor.A, this._data.EndColor.A, this._interpolationFactor)
-        };
+        if (SceneManager.ActiveCam3D!.GetFrustum().ContainsBox(box)) {
+            float rotation = RayMath.Lerp(this._data.StartRotation, this._data.EndRotation, this._interpolationFactor);
         
-        RectangleF source = new RectangleF(0, 0, this.Texture.Width, this.Texture.Height);
-        RectangleF dest = new RectangleF(this.Position.X + (source.X / 2), this.Position.Y + (source.Y / 2), source.X, source.Y); // TODO FIX FOR GUI THE ROTATION (CHECK IF IT EVEN BROKEN, I THINK NOT)
-        Vector2 origin = new Vector2(dest.Width / 2.0F, dest.Height / 2.0F);
+            Color color = new Color() {
+                R = (byte) RayMath.Lerp(this._data.StartColor.R, this._data.EndColor.R, this._interpolationFactor),
+                G = (byte) RayMath.Lerp(this._data.StartColor.G, this._data.EndColor.G, this._interpolationFactor),
+                B = (byte) RayMath.Lerp(this._data.StartColor.B, this._data.EndColor.B, this._interpolationFactor),
+                A = (byte) RayMath.Lerp(this._data.StartColor.A, this._data.EndColor.A, this._interpolationFactor)
+            };
         
-        Graphics.BeginShaderMode(this._data.Effect.Shader);
-        Graphics.DrawBillboardPro(cam.GetCamera3D(), this.Texture, source, this.Position, cam.Up, size, origin, rotation, color);
-        Graphics.EndShaderMode();
+            Rectangle source = new Rectangle(0, 0, this.Texture.Width, this.Texture.Height);
+            Rectangle dest = new Rectangle(this.Position.X + (source.X / 2), this.Position.Y + (source.Y / 2), source.X, source.Y);
+            Vector2 origin = new Vector2(dest.Width / 2.0F, dest.Height / 2.0F);
+            
+            Graphics.BeginShaderMode(this._data.Effect.Shader);
+            Graphics.DrawBillboardPro(cam.GetCamera3D(), this.Texture, source, this.Position, cam.Up, size, origin, rotation, color);
+            Graphics.EndShaderMode();
+        }
     }
 
     protected override void Dispose(bool disposing) { }

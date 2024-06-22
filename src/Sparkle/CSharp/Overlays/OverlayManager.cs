@@ -1,8 +1,12 @@
+using Sparkle.CSharp.Logging;
+
 namespace Sparkle.CSharp.Overlays;
 
 public static class OverlayManager {
     
     internal static List<Overlay> Overlays = new();
+    
+    public static bool HasInitialized { get; private set; }
     
     /// <summary>
     /// Used for Initializes objects.
@@ -13,6 +17,8 @@ public static class OverlayManager {
                 overlay.Init();
             }
         }
+
+        HasInitialized = true;
     }
     
     /// <summary>
@@ -70,7 +76,22 @@ public static class OverlayManager {
             return;
         }
         
+        if (HasInitialized) {
+            if (!overlay.HasInitialized) {
+                overlay.Init();
+            }
+        }
+        
         Logger.Info($"Added Overlay: {overlay.Name}");
         Overlays.Add(overlay);
+    }
+    
+    /// <summary>
+    /// Performs cleanup operations.
+    /// </summary>
+    public static void Destroy() {
+        foreach (Overlay overlay in Overlays.ToList()) {
+            overlay.Dispose();
+        }
     }
 }

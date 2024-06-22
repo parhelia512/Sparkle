@@ -1,13 +1,15 @@
 using System.Numerics;
-using Raylib_CSharp;
 using Raylib_CSharp.Geometry;
+using Raylib_CSharp.Transformations;
+using Raylib_CSharp.Unsafe.Spans.Data;
+using Sparkle.CSharp.Logging;
 
 namespace Sparkle.CSharp.Rendering.Models;
 
 public class ModelAnimationPlayer {
 
     private readonly Model _model;
-    private readonly ModelAnimation[] _animations;
+    private readonly ReadOnlySpanData<ModelAnimation> _animations;
     
     private int _frameCount;
     private int _playingIndex;
@@ -22,7 +24,7 @@ public class ModelAnimationPlayer {
     /// </summary>
     /// <param name="model">The 3D model associated with the animation player.</param>
     /// <param name="animations">An array of <see cref="ModelAnimation"/> objects representing different animations for the model.</param>
-    public ModelAnimationPlayer(Model model, ModelAnimation[] animations) {
+    public ModelAnimationPlayer(Model model, ReadOnlySpanData<ModelAnimation> animations) {
         this._model = model;
         this._animations = animations;
     }
@@ -35,12 +37,12 @@ public class ModelAnimationPlayer {
         if (!this._isPause && this._isPlaying) {
             this._frameCount++;
 
-            if (this._frameCount <= this._animations[this._playingIndex].FrameCount) {
+            if (this._frameCount <= this._animations.GetSpan()[this._playingIndex].FrameCount) {
                 if (this._blendFactor > 0) {
                     this.BlendAnimation();
                 }
                 
-                ModelAnimation.Update(this._model, this._animations[this._playingIndex], this._frameCount);
+                this._animations.GetSpan()[this._playingIndex].Update(this._model, this._frameCount);
             }
             else {
                 if (this._isLoop) {
@@ -53,24 +55,23 @@ public class ModelAnimationPlayer {
         }
     }
 
-    // TODO Check this system when Raylib-v5.1 release and the GLTF/GLB Blockbench bug is fixed.
+    // TODO Fix it! (https://github.com/jeangit/raylib/commit/54189ff44383a04d7edde975a17561caf2fa28f0, https://github.com/raylib-extras/examples-cpp/tree/main/interpolated_animation_gpu)
     /// <summary>
     /// Blend two animations based on the given blend factor.
     /// </summary>
     private void BlendAnimation() {
-        ModelAnimation currentAnimation = this._animations[this._playingIndex];
-        ModelAnimation nextAnimation = this._animations[this._oldPlayingIndex];
-        // TODO DONE IT
-        /*
+        ModelAnimation currentAnimation = this._animations.GetSpan()[this._playingIndex];
+        ModelAnimation nextAnimation = this._animations.GetSpan()[this._oldPlayingIndex];
+        
         for (int frameIndex = 0; frameIndex < currentAnimation.FrameCount; frameIndex++) {
-            FramePoses currentFramePoses = currentAnimation.FramePosesColl[frameIndex];
-            FramePoses nextFramePoses = nextAnimation.FramePosesColl[frameIndex];
+            Span<Transform> currentFramePoses = currentAnimation.FramePosesCollection[frameIndex];
+            Span<Transform> nextFramePoses = nextAnimation.FramePosesCollection[frameIndex];
 
             for (int boneIndex = 0; boneIndex < currentAnimation.BoneCount; boneIndex++) {
                 Transform interpolatedPose = this.InterpolatePoses(currentFramePoses[boneIndex], nextFramePoses[boneIndex], this._blendFactor);
                 currentFramePoses[boneIndex] = interpolatedPose;
             }
-        }*/
+        }
     }
 
     /// <summary>
@@ -99,8 +100,8 @@ public class ModelAnimationPlayer {
     /// <param name="loop">If set to <c>true</c>, the animation will loop; otherwise, it will play once.</param>
     /// <param name="blendFactor">The blend factor between animations.</param>
     public void Play(int index, bool loop, float blendFactor) {
-        if (index > this._animations.Length - 1) {
-            Logger.Error($"Unable to play the animation at index [{index}], the maximum number of available animations is [{this._animations.Length}].");
+        if (index > this._animations.GetSpan().Length - 1) {
+            Logger.Error($"Unable to play the animation at index [{index}], the maximum number of available animations is [{this._animations.GetSpan().Length}].");
             return;
         }
 
@@ -116,7 +117,7 @@ public class ModelAnimationPlayer {
     /// Stops the playback of the animation.
     /// </summary>
     public void Stop() {
-        ModelAnimation.Update(this._model, this._animations[this._playingIndex], 0);
+        this._animations.GetSpan()[this._playingIndex].Update(this._model, 0);
         this._frameCount = 0;
         this._playingIndex = 0;
         this._oldPlayingIndex = 0;

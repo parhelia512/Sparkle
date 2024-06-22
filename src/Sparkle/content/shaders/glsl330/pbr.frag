@@ -1,6 +1,6 @@
 #version 330
 
-#define MAX_LIGHTS 815
+#define MAX_LIGHTS 1024
 #define PI 3.14159265358979323846
 
 // Light Types
@@ -9,17 +9,17 @@
 #define LIGHT_SPOT 2
 
 struct Light {
-    int enabled;
     int type;
     vec3 position;
     vec3 target;
     vec4 color;
-    float intensity;
 };
 
-layout(std140) uniform LightBuffer {
+layout(std140) uniform lightBuffer {
     Light lights[MAX_LIGHTS];
 };
+
+//uniform samplerBuffer lightBuffer;
 
 uniform int numOfLights;
 
@@ -116,20 +116,21 @@ vec4 ComputePBR() {
 
     for (int i = 0; i < numOfLights; ++i) {
         Light light = lights[i];
-        
+        //light.enabled = int(texelFetch(lightBuffer, i).r);
+
         vec3 L;
         vec3 H;
         float dist;
         float attenuation;
         vec3 radiance;
-        
+
         switch (light.type) {
             case LIGHT_DIRECTIONAL:
                 L = -normalize(light.target - light.position);
                 H = normalize(V + L);
-                radiance = light.color.rgb * light.intensity; // calc input radiance,light energy comming in
+                radiance = light.color.rgb; // calc input radiance,light energy comming in
                 break;
-            
+
             case LIGHT_SPOT:
                 L = normalize(light.position - fragPosition);
                 H = normalize(V + L);
@@ -139,18 +140,18 @@ vec4 ComputePBR() {
                 // Check if the fragment is within the spot cone
                 float spotCosine = dot(normalize(light.target - light.position), -L);
                 float spotFactor = smoothstep(light.target.y, light.target.y + light.color.a, spotCosine);
-                radiance = light.color.rgb * light.intensity * attenuation * spotFactor; // calc input radiance,light energy comming in
+                radiance = light.color.rgb * attenuation * spotFactor; // calc input radiance,light energy comming in
                 break;
-            
+
             case LIGHT_POINT:
                 L = normalize(light.position - fragPosition); // calc light vector
                 H = normalize(V + L); // calc halfway bisecting vector
                 dist = length(light.position - fragPosition); // calc distance to light
                 attenuation = 1.0 / (dist * dist * 0.23); // calc attenuation
-                radiance = light.color.rgb * light.intensity * attenuation; // calc input radiance,light energy comming in
+                radiance = light.color.rgb * attenuation; // calc input radiance,light energy comming in
                 break;
         }
-        
+
         // Cook-Torrance BRDF distribution function
         float nDotV = max(dot(N, V), 0.0000001);
         float nDotL = max(dot(N, L), 0.0000001);
@@ -166,9 +167,9 @@ vec4 ComputePBR() {
         vec3 kD = vec3(1.0) - F;
         // mult kD by the inverse of metallnes , only non-metals should have diffuse light
         kD *= 1.0 - metallic;
-        lightAccum += ((kD * albedo.rgb / PI + spec) * radiance * nDotL) * light.enabled; // angle of light has impact on result
+        lightAccum += (kD * albedo.rgb / PI + spec) * radiance * nDotL; // angle of light has impact on result
     }
-    
+
     vec3 ambient_final = (ambientColor + albedo) * ambient * 0.5;
     return vec4(ambient_final + lightAccum * ao + emissive, albedo_tex.w);
 }

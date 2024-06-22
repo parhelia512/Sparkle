@@ -1,3 +1,5 @@
+using Sparkle.CSharp.Logging;
+
 namespace Sparkle.CSharp.Effects;
 
 public static class EffectManager {
@@ -74,10 +76,21 @@ public static class EffectManager {
         }
         
         if (HasInitialized) {
-            effect.Init();
+            if (!effect.HasInitialized) {
+                effect.Init();
+            }
         }
         
         Logger.Info($"Added Effect with shader ID [{effect.Shader.Id}] successfully.");
         Effects.Add(effect);
+    }
+    
+    /// <summary>
+    /// Performs cleanup operations.
+    /// </summary>
+    public static void Destroy() {
+        foreach (Effect effect in Effects.ToList()) {
+            effect.Dispose();
+        }
     }
 }

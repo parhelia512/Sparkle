@@ -1,7 +1,7 @@
-using System.Drawing;
 using System.Numerics;
+using Raylib_CSharp;
 using Raylib_CSharp.Interact;
-using Raylib_CSharp.Shapes;
+using Raylib_CSharp.Transformations;
 using Raylib_CSharp.Windowing;
 
 namespace Sparkle.CSharp.GUI.Elements;
@@ -17,6 +17,7 @@ public abstract class GuiElement : Disposable {
     public Anchor? AnchorPoint;
     public Vector2 Offset;
     public Vector2 Size;
+    public float Rotation;
 
     protected bool IsHovered;
     protected bool IsClicked;
@@ -56,8 +57,8 @@ public abstract class GuiElement : Disposable {
         this.CalculateSize();
         this.CalculatePosition();
         
-        RectangleF rec = new RectangleF(this.Position.X, this.Position.Y, this.ScaledSize.X, this.ScaledSize.Y);
-        if (Shape.CheckCollisionPointRec(Input.GetMousePosition(), rec)) {
+        Rectangle rec = new Rectangle(this.Position.X, this.Position.Y, this.ScaledSize.X, this.ScaledSize.Y);
+        if (this.CheckCollisionPointRec(Input.GetMousePosition(), rec, this.Rotation)) {
             this.IsHovered = true;
 
             if (Input.IsMouseButtonPressed(MouseButton.Left) && this.Enabled) {
@@ -95,6 +96,28 @@ public abstract class GuiElement : Disposable {
     protected virtual void CalculateSize() {
         float scale = Window.GetRenderHeight() / (float) Game.Instance.Settings.Height;
         this.ScaledSize = this.Size * scale * GuiManager.Scale;
+    }
+    
+    /// <summary>
+    /// Checks if a given point collides with a specified rectangle in the GUI element.
+    /// </summary>
+    /// <param name="point">The point to check for collision.</param>
+    /// <param name="rec">The rectangle to check for collision.</param>
+    /// <param name="rotation">The rotation of the rectangle in degrees.</param>
+    /// <returns>True if the point collides with the rectangle, false otherwise.</returns>
+    protected bool CheckCollisionPointRec(Vector2 point, Rectangle rec, float rotation) {
+        float rotationInRadians = rotation * RayMath.Deg2Rad;
+        
+        float centerX = rec.X + rec.Width / 2f;
+        float centerY = rec.Y + rec.Height / 2f;
+
+        float deltaX = point.X - centerX;
+        float deltaY = point.Y - centerY;
+
+        float rotatedX = centerX + (deltaX * MathF.Cos(rotationInRadians) - deltaY * MathF.Sin(rotationInRadians));
+        float rotatedY = centerY + (deltaX * MathF.Sin(rotationInRadians) + deltaY * MathF.Cos(rotationInRadians));
+
+        return rotatedX >= rec.X && rotatedY >= rec.Y && rotatedX <= (rec.X + rec.Width) && rotatedY <= (rec.Y + rec.Height);
     }
 
     /// <summary>

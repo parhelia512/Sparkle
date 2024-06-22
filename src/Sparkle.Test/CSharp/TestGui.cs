@@ -5,6 +5,7 @@ using Sparkle.CSharp;
 using Sparkle.CSharp.GUI;
 using Sparkle.CSharp.GUI.Elements;
 using Sparkle.CSharp.GUI.Elements.Data;
+using Sparkle.CSharp.Logging;
 
 namespace Sparkle.Test.CSharp;
 
@@ -49,6 +50,7 @@ public class TestGui : Gui {
             ToggledText = "Checked",
             ToggledColor = Color.Green,
             ToggledTextColor = Color.DarkGreen,
+            Rotation = 45
         };
         
         LabelData toggleLabelData = new LabelData() {

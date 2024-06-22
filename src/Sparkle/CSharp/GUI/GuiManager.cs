@@ -42,8 +42,8 @@ public static class GuiManager {
         ActiveGui?.Dispose();
         ActiveGui = gui;
         
-        if (ActiveGui != null && !ActiveGui.HasInitialized) {
-            ActiveGui.Init();
+        if (gui != null && !gui.HasInitialized) {
+            gui.Init();
         }
     }
 
@@ -53,5 +53,12 @@ public static class GuiManager {
     /// <param name="scale">The scale value to be set.</param>
     public static void SetScale(float scale) {
         Scale = Math.Clamp(scale, 0.5F, 1);
+    }
+    
+    /// <summary>
+    /// Performs cleanup operations.
+    /// </summary>
+    public static void Destroy() {
+        ActiveGui?.Dispose();
     }
 }

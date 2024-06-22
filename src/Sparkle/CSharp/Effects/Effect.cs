@@ -8,7 +8,7 @@ public class Effect : Disposable {
     
     public Shader Shader { get; private set; }
     public bool HasInitialized { get; private set; }
-    
+
     /// <summary>
     /// Constructor for creating an Effect object.
     /// </summary>
@@ -31,6 +31,12 @@ public class Effect : Disposable {
     protected internal virtual void Update() { }
     
     /// <summary>
+    /// Updates the shader parameters for the materials, called from the ModelRenderer.
+    /// </summary>
+    /// <param name="material">The material to be updated.</param>
+    protected internal virtual void UpdateMaterialParameters(Material material) { }
+    
+    /// <summary>
     /// Called after the Update method on each tick to further update dynamic elements and game logic.
     /// </summary>
     protected internal virtual void AfterUpdate() { }
@@ -46,14 +52,9 @@ public class Effect : Disposable {
     /// </summary>
     protected internal virtual void Draw() { }
 
-    /// <summary>
-    /// Updates the shader parameters for the materials, called from the ModelRenderer.
-    /// </summary>
-    /// <param name="materials">Array of materials to be updated.</param>
-    protected internal virtual void UpdateMaterialParameters(Material[] materials) { }
-
     protected override void Dispose(bool disposing) {
         if (disposing) {
+            Game.Instance.Content.Unload(this.Shader);
             EffectManager.Effects.Remove(this);
         }
     }

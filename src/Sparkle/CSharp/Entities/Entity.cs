@@ -1,11 +1,12 @@
 using System.Numerics;
 using Sparkle.CSharp.Entities.Components;
+using Sparkle.CSharp.Logging;
 
 namespace Sparkle.CSharp.Entities;
 
 public class Entity : Disposable {
     
-    public int Id { get; internal set; }
+    public uint Id { get; internal set; }
 
     public string Tag;
 
